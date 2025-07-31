@@ -6,7 +6,7 @@ from datetime import datetime
 import traceback
 
 def sanitize_text(text: str) -> str:
-    """Nettoie le texte en supprimant les balises < > et en échappant les caractères XML."""
+    """Nettoie le texte en supprimant les balises < > et en échappant les caractères XML"""
     if not text:
         return ""
     # Convertir en chaîne si ce n'est pas déjà le cas (par ex. si un int ou float passe par là)
@@ -67,9 +67,6 @@ async def generate_lightrag_graphml(entities_file: str, relationships_file: str,
         with open(relationships_file, 'r', encoding='utf-8') as f:
             relationships_data = json.load(f)
 
-        # --- DÉCLARATION DES CLÉS (KEY) : Très important pour GraphML ---
-        # J'ai ajusté les attr.name pour qu'ils soient plus lisibles que d0, d1...
-        # et correspondent mieux à votre usage. L'ID (d0, d1, etc.) reste le même.
         graphml_header = """<?xml version='1.0' encoding='utf-8'?>
 <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
     <key id="d11" for="edge" attr.name="created_at" attr.type="long"/>
@@ -84,7 +81,7 @@ async def generate_lightrag_graphml(entities_file: str, relationships_file: str,
     <key id="d2" for="node" attr.name="description" attr.type="string"/>
     <key id="d1" for="node" attr.name="type" attr.type="string"/>
     <key id="d0" for="node" attr.name="name" attr.type="string"/>
-    <graph edgedefault="undirected">""" # <-- `edgedefault="undirected"` est un bon choix par défaut si pas de direction spécifique.
+    <graph edgedefault="undirected">""" 
 
         graphml_footer = """
     </graph>

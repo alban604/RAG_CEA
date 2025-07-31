@@ -35,7 +35,7 @@ def comparaison_avec_prompt_calcule(prompt,vector_graph_storage):
         vector_graph_storage (str): dossier de stockage des vecteurs et graphe du lightrag que l'on utilise
 
     Returns:
-        List[str]: Liste des deux meilleures suggestions 
+        list[str]: Liste des deux meilleures suggestions 
     """
     #Récupère toutes les suggestions possibles, c'est-à-dire toutes les questions dont le rag a déjà enregistré la réponse
     set_question_connu = set()
@@ -46,7 +46,7 @@ def comparaison_avec_prompt_calcule(prompt,vector_graph_storage):
             set_question_connu.add(question)
     
     #tri des suggestions dans l'ordre de pertinence 
-    meilleur_suggestion = sorted(list(set_question_connu),key=lambda x:comparaison_prompt(x,prompt))[-3:]
+    meilleur_suggestion = sorted(list(set_question_connu),key=lambda x:comparaison_prompt(x,prompt))[-2:]
     return meilleur_suggestion
 
 if __name__=="__main__":

@@ -8,7 +8,7 @@ from similarite_mots import comparaison_avec_prompt_calcule
 import json
 
 #VARIABLE à adapter 
-VECTOR_GRAPH_STORAGE = "/appli/stage_rag_ov/Vector_partial_stic_v2_entraine" #dossier de vecteur et graphe du LightRAG qu'on veut lancer
+VECTOR_GRAPH_STORAGE = "/appli/rag_code/Vector_partial_stic_entraine" #dossier de vecteur et graphe du LightRAG qu'on veut lancer
 
 #Chargement des variables d'environnements
 load_dotenv(dotenv_path="password_and_key.env")
@@ -34,18 +34,18 @@ def authentifier(username, password):
     Returns:
         Bool: True si authentification réussi, False sinon
     """
-    global groupe_a_avoir_actuel
+    global groupe_a_avoir_actuel #contient le début du groupe dont on veut tester l'appartenance de l'utilisateur ex : "GRE - 110.3.2" 
     #POUR LE DEBBUGAGE A ENLEVER 
-    if username=="" and password=="":
-        return True
+    # if username=="" and password=="":
+    #     return True
     try:
+        #Connnexion du compte de service
         server = Server(LDAP_SERVER,use_ssl=True,get_info=ALL)
         service_conn = Connection(server,user=f"{LDAP_DOMAIN}\\{SERVICE_USER}",password=SERVICE_PASSWORD,authentication=NTLM,auto_bind=True)
         search_filter = f"(sAMAccountName={username})"
         service_conn.search(BASE_DN, search_filter, attributes=["distinguishedName","memberOf"])
         if not service_conn.entries:
             return False
-        #user_dn = service_conn.entries[0].distinguishedName.value
         ntlm_user = LDAP_DOMAIN+"\\"+username
         user_conn = Connection(server, user=ntlm_user, password=password, authentication=NTLM)
 
@@ -88,13 +88,13 @@ async def chat_fn(message, history, mode, type_txt):
         str: réponse de l'IA à l'utilisateur
     """
     history.append({"role":"user","content":message})
-    yield history
+    yield history #affiche la question de l'utilisateur
     status_message = {"role": "assistant", "content": "*Traitement...*"}
     history.append(status_message)
-    yield history
-    response = await rag_answer(message, VECTOR_GRAPH_STORAGE, history, mode, type_txt)  
-    history.remove(status_message)
-    history.append({"role":"assistant","content":response})
+    yield history #affiche le message qui indique que le rag est entrain de "réfléchir"
+    response = await rag_answer(message, VECTOR_GRAPH_STORAGE, history, mode, type_txt) #obtenir le résultat du rag sur le prompt
+    history.remove(status_message) #retire le message qui indique que le rag est entrain de réfléchir
+    history.append({"role":"assistant","content":response}) #ajoute la réponse du rag
     yield history
      
 def get_suggestion1(user_prompt):
@@ -128,13 +128,13 @@ def GetSourcesFromLlmReponse(reponse):
         reponse (str): reponse du rag à un prompt
 
     Returns:
-        List [str]: liste des sources mentionnées dans le fichier (les sources sont les chemins des fichiers avec des tirets à la place des /)
+        list[str]: liste des sources mentionnées dans le fichier (les sources sont les chemins des fichiers avec des tirets à la place des /)
     """
     liste_source_return = []
-    if len(reponse)>14:#Si la réponse est rop petite elle n'a pas de sources
+    if len(reponse)>14:#Si la réponse est trop petite elle n'a pas de sources
         for i in range(14,len(reponse)): 
-            if reponse[i-14:i]=="### Références":  #On cherche la zone des sources à la fin de la réponse du rag
-                sources_space = reponse[i:]
+            if reponse[i-14:i]=="### Références" or reponse[i-14:i]=="### References":  #On cherche la zone des sources à la fin de la réponse du rag
+                sources_space = reponse[i:] #= zone de sources
                 if len(sources_space)<=5:
                     return
                 sources_space = sources_space.split("\n")   #On sépare la zone des sources par ligne
@@ -143,27 +143,28 @@ def GetSourcesFromLlmReponse(reponse):
                         for l in range(5,len(source_not_extracted)-1):
                             if source_not_extracted[l-5:l]=="[KG] " or source_not_extracted[l-5:l]=="[KC] ": #Sur chaque ligne on recherche la mention de KG ou KC 
                                 liste_source_return.append(source_not_extracted[l:])
+    
                 return liste_source_return
     return liste_source_return
 
 def downloader(chatbot):
     """Fonction qui renvoie les chemins des fichiers de source (utile pour gradio)
-
+        RQ : pour que le code fonctionne, le fichier dictio_nom_to_chemin doit avoir été généré (par generateur_de_dict_name_chemin.py) dans le dossier de stockage des vecteurs et être à jour.
     Args:
         chatbot (list[dict[str:str]]): list de dictionnaires de la forme  {"role": "assistant", "content": "I am happy to provide you that report and plot."},
 
     Returns:
-        list : Liste des chemins des fichiers de sources
+        list[str] : Liste des chemins des chemins des fichiers de sources
     """
     sources = []
     for conv in chatbot:
-        if conv["role"]=="assistant":
+        if conv["role"]=="assistant": #on ne récupère que sur les zones de réponses de l'ia et non celles de l'utilisateurs
             reponse = conv["content"]
             sources += GetSourcesFromLlmReponse(reponse) #récupère les sources de tout l'historique
     
-    #on transforme les sources qui sont les chemins avec les tirets en chemin de fichier 
+    #on récupère les chemins des sources à partir de leur nom (chemin de fichier avec - à la place de \ et qui finisse en .txt) 
     try:
-        with open(VECTOR_GRAPH_STORAGE+"/from_name_to_chemin.json",'r') as f:
+        with open(VECTOR_GRAPH_STORAGE+"/from_name_to_chemin.json",'r') as f: #on récupère le dictionnaire qui associe le nom au chemin
             dictio_nom_to_chemin = json.load(f)
         return [dictio_nom_to_chemin[source+".txt"] for source in sources if source+".txt" in dictio_nom_to_chemin.keys()] 
     except:
@@ -181,7 +182,7 @@ def lancer_chat(prefixe_autorise,launching_port,list_dossier_source):
 
     """
     global groupe_a_avoir_actuel
-    groupe_a_avoir_actuel = prefixe_autorise
+    groupe_a_avoir_actuel = prefixe_autorise # pour l'authentification
     with gr.Blocks(theme=gr.themes.Soft(primary_hue="blue", neutral_hue="blue")) as demo:
         chatbot = gr.Chatbot("", type="messages",autoscroll=False,show_copy_button=True,layout='bubble')
         with gr.Row():
@@ -208,13 +209,13 @@ def lancer_chat(prefixe_autorise,launching_port,list_dossier_source):
                 gr.Markdown("### Remarques sur les types de réponses : ")
                 gr.Markdown(" - Les types de réponses ne fonctionne pas si vous utilisez les suggestions.")
  
-        txt.change(fn=get_suggestion1,inputs=[txt],outputs=suggestion1)
-        txt.change(fn=get_suggestion2,inputs=[txt],outputs=suggestion2)
-        suggestion1.submit(fn=chat_fn, inputs=[suggestion1, chatbot, mode_a_choisir, t_texte_a_choisir], outputs=chatbot)
-        suggestion2.submit(fn=chat_fn, inputs=[suggestion2, chatbot, mode_a_choisir, t_texte_a_choisir], outputs=chatbot)
-        telecharger.click(fn=downloader, inputs=chatbot,outputs=file_button)
+        txt.change(fn=get_suggestion1,inputs=[txt],outputs=suggestion1) #quand l'utilisateur tape des lettres/modifie le prompt dans la case txt, on envoie le contenu pour calculer les suggestions
+        txt.change(fn=get_suggestion2,inputs=[txt],outputs=suggestion2) #idem
+        suggestion1.submit(fn=chat_fn, inputs=[suggestion1, chatbot, mode_a_choisir, t_texte_a_choisir], outputs=chatbot) #quand l'utilisateur sélectionne la suggestion et appuie sur entrée elle est envoyée au chatbot
+        suggestion2.submit(fn=chat_fn, inputs=[suggestion2, chatbot, mode_a_choisir, t_texte_a_choisir], outputs=chatbot) #idem
+        telecharger.click(fn=downloader, inputs=chatbot,outputs=file_button) #lance le chargement des fichiers sources
 
-        txt.submit(fn=chat_fn, inputs=[txt, chatbot, mode_a_choisir, t_texte_a_choisir], outputs=chatbot)
+        txt.submit(fn=chat_fn, inputs=[txt, chatbot, mode_a_choisir, t_texte_a_choisir], outputs=chatbot) #quand l'utilisateur a selectionné son prompt et appuie sur entrée il est envoyé au chatbot
         
         demo.launch(server_name="0.0.0.0", server_port=launching_port,allowed_paths=list_dossier_source, auth=authentifier,ssl_keyfile="/appli/cert/key.pem",ssl_certfile="/appli/cert/cert.pem",ssl_verify=False) #
 

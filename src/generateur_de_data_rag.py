@@ -32,7 +32,7 @@ rag_instance = None
 async def initialisation_rag(vector_graph_storage):
     """Initialise une instance de LightRag
     Args :
-        vector_graph_storage (str) : Dossier où l'on souhaite stocker les vecteurs et graphes du rag -> Création automatique
+        vector_graph_storage (str) : Dossier où l'on souhaite stocker les vecteurs et graphes du rag. Création automatique si non existant
     Return : Instance de LightRag
     """
     try :
@@ -51,33 +51,33 @@ async def insert(rag,donnee_txt,nom_du_fich,i):
     Args:
         rag (instance de LightRag): instance de Lightrag
         donnee_txt (str): le contenu 
-        nom_du_fich (str): chemin du fichier (en général avec des - à la place des /)
+        nom_du_fich (str): chemin du fichier (en général avec des - à la place des / et en .txt)
         i (int): numéro du fichier traité
     """
     try:
         nom_du_fich = nom_du_fich.decode('utf-8') if isinstance(nom_du_fich, bytes) else str(nom_du_fich)
-        #print(f"[++] Création d'une tache {i} ---- Doc : {nom_du_fich[:-4]}",flush=True)
+
         await rag.ainsert(str(donnee_txt),file_paths=[nom_du_fich[:-4]])
         print(f"[++] Insertion réussi {i} ---- Doc : {nom_du_fich[:-4]}",flush=True)
     except Exception as e:
-        print(f"[DEBUG] nom_du_fich = {nom_du_fich} ({type(nom_du_fich)})")
-        print(f"[DEBUG] file_paths = {[nom_du_fich[:-4]]} ({type(nom_du_fich[:-4])})")
-        print(f"[DEBUG] content :  ({type(donnee_txt)})")
+        # print(f"[DEBUG] nom_du_fich = {nom_du_fich} ({type(nom_du_fich)})")
+        # print(f"[DEBUG] file_paths = {[nom_du_fich[:-4]]} ({type(nom_du_fich[:-4])})")
+        # print(f"[DEBUG] content :  ({type(donnee_txt)})")
         print(f"[ERROR] Exception lors de l'insertion du fichier : {nom_du_fich}")
         print(f"Type : {type(e).__name__}")
         print(f"Message : {e}")
-        print("[TRACEBACK]")
-        traceback.print_exc()
+        # print("[TRACEBACK]")
+        # traceback.print_exc()
 
 
-async def ingere_connaissance(rag,bd,list_fichier=None): #ATTENTION list_fichier contient les chemins avec des tirets
+async def ingere_connaissance(rag,bd,list_fichier=None): #ATTENTION list_fichier contient les chemins avec des - à la place des \ et finissant en .txt
     """Intègre les connaissances de la base de donnée bd dans l'instance du rag passsé en paramètre
         PREREQUIS : bd doit contenir la traduction en txt des documents que l'on souhaite ingérer 
 
     Args:
         rag : Instance de LightRag à laquelle on souhaite ajouter les données
-        bd (<instance de Bd_Redis>) : base de donnée de laquelle on veut ingérer les connaissances du rag 
-        list_fichier (list) : liste de fichier qu'on veut insérer dans le rag depuis le dossier (si =None tout les fichiers seront traités)
+        bd (<instance de Bd_Redis>) : base de donnée de laquelle on veut ingérer les connaissances dans le rag 
+        list_fichier (list[str]) : si =None tout les fichiers de la bd seront traités sinon seulement les fichiers dont la clé est dans list_fichier
     Returns:
         rag : Instance de LightRag à laquelle on a ajouté les données
     """
@@ -88,12 +88,10 @@ async def ingere_connaissance(rag,bd,list_fichier=None): #ATTENTION list_fichier
             for key in bd.scan_keys():
                 try:
                     nom_du_fich = key.decode('utf-8')
-                    if "-ESI-" in nom_du_fich:
-                        print(nom_du_fich)
                     if list_fichier==None or nom_du_fich in list_fichier:
                         content = bd.get_content_from_key(key)
                         if len(content)>15: #si le document est vide ou presque cela peut créer une erreur  #en cas de doc vide on le passe
-                            content = json.dumps({"document_title" : nom_du_fich,"document_content":content})
+                            content = json.dumps({"document_title" : nom_du_fich,"document_content":content}) #on ajoute au contenu du document le nom du fichier pour que LightRAG le considère
                             print(f"[+] Ouverture du fichier : {i} ---- Doc : {nom_du_fich[:-4]}")
                             i+=1
                             task = tg.create_task(insert(rag,content,nom_du_fich,i))
@@ -129,7 +127,7 @@ async def rag_gen_data(vector_graph_storage,bd,list_fichier=None):
         print("[END] Vecteur et graphe généré",flush=True)
     
     except Exception as e:
-        print("Erreur dans la fonction Main : "+str(e))
+        print("Erreur dans la fonction rag_gen_data() : "+str(e))
         return 
     finally:
         await rag.finalize_storages()

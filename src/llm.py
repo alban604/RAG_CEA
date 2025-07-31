@@ -21,18 +21,16 @@ class Llm_access:
         Args:
             prompt (str): prompt (point de vue utilisateur)
             system_prompt (str, optional): contient le contexte à considérer pour répondre au prompt (point de vue système)
-            history_message (list, optional): historique. Non pris en compte pour le moment
+            history_message (list, optional): historique
         Returns:
             str: réponse de l'IA générative à prompt et sytem_prompt
         """
         try:
             #Génération du prompt qu'on va envoyer à l'IA
             message = []
-            if system_prompt:
+            if system_prompt: 
                 message.append({"role": "system", "content": system_prompt})
             message.append({"role": "user","content": str(prompt)})
-            """if history_message:
-                message.extend(history_message)"""
 
             headers = {
                 "Content-Type": "application/json",
@@ -72,8 +70,7 @@ class Llm_access:
         emb = requests.post(url, headers=headers, json=payload, verify=self.CA).json()
         t_nump = np.array(emb["data"][0]["embedding"])
 
-        self.nb_emb_ge #compteur d'embedding généré
-        self.nb_emb_ge+=1
+        self.nb_emb_ge+=1 #compteur d'embedding généré
         print(f"[+] Embedding généré: {self.nb_emb_ge} ")
         return t_nump
 
@@ -91,7 +88,6 @@ class Llm_access:
             if isinstance(text,list):
                 tasks = [self.mistral_embed_one_by_one(elt) for elt in text]
                 return await asyncio.gather(*tasks)
-                #return [await mistral_embed_one_by_one(elt) for elt in text]
             else:
                 return await self.mistral_embed_one_by_one(text)
             
