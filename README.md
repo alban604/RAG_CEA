@@ -1,6 +1,6 @@
 # 🧠 RAG Chatbot – Retrieval-Augmented Generation
 
-Ce projet est un **chatbot intelligent** basé sur la technique du **Retrieval-Augmented Generation (RAG)**. Il permet de répondre à des questions en langage naturel en s'appuyant sur un **corpus documentaire personnalisé**.
+Ce projet est un **chatbot IA** basé sur la technique du **Retrieval-Augmented Generation (RAG)**. Il permet de répondre à des questions en langage naturel en s'appuyant sur un **corpus documentaire**.
 
 ---
 
