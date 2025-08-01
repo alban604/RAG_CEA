@@ -31,7 +31,7 @@ L'objectif de ce projet est de construire un assistant conversationnel capable d
 ---
 
 ## 🧱 Structure du code
-**connexion_bd_redis.py** : contient tout les fonctions de transfert et d'utilisation de la base redis qui contient le corpus documentaire transformé en texte (après OCR, etc...)
+- **connexion_bd_redis.py** : contient tout les fonctions de transfert et d'utilisation de la base redis qui contient le corpus documentaire transformé en texte (après OCR, etc...)
 **generateur_de_data_rag.py** : contient les fonctions qui permettent l'ingestion de donnée par le rag et donc la création de vecteurs et graphes sur ces dernières
 **generateur_de_dict_name_chemin.py** : génère un dictionnaire qui associe les clés des documents dans la base de données aux chemins de ceux-ci. Cela permet de récupérer les sources depuis l'interface Gradio
 **generateur_de_graphe.py** : permet -en cas d'échec de LightRAG dans la génération du graphe- de le générer manuellement
